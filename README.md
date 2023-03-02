@@ -1,5 +1,7 @@
 # rainforest
 
+This work is still in progress 👷‍♂️
+
 ## Setup
 
 - Install [Conda (miniconda)](https://conda.io/miniconda.html) & [Poetry](https://python-poetry.org/docs/#installation):
