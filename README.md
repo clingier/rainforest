@@ -1,6 +1,6 @@
 # rainforest
 
-This work is still in progress 👷‍♂️
+This work is still in progress 👷‍♂️ 
 
 ## Setup
 
@@ -21,7 +21,7 @@ wandb login
 ```
 
 
-## Commands
+## Commands (Not yet)
 
 - Train model
 ```bash
