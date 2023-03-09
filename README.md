@@ -17,7 +17,7 @@ source activate rainforest
 poetry install
 ```
 
-## Commands (Not yet)
+## Commands
 
 - Train model
 ```bash
