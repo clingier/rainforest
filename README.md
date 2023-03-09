@@ -1,4 +1,6 @@
-# rainforest
+# rainforest: Detecting Rainforest's species using sound
+
+This work is a deep audio classifier built on the kaggle Rainforest Connectino Species Audio Detection competition dataset.
 
 This work is still in progress 👷‍♂️
 
@@ -14,12 +16,6 @@ source activate rainforest
 ```bash
 poetry install
 ```
-- Create an account on [Weights and Biases](https://wandb.ai)
-- Setup Weights and Biases:
-```bash
-wandb login
-```
-
 
 ## Commands
 

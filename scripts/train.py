@@ -1,90 +1,62 @@
-import os
-import random
-import string
-import yaml
-import fire
+from torch.nn import BCEWithLogitsLoss
+
 from rich import print, pretty, inspect, traceback
 pretty.install()
 traceback.install()
 
-import torch
-import numpy as np
+from rainforest.models.audio_classifier import AudioClassifierModule
+from rainforest.data.datasets import AudioDataset
+
 import pytorch_lightning as pl
+from pytorch_lightning.loggers import TensorBoardLogger
+from pytorch_lightning.callbacks import ModelCheckpoint
 
-import wandb
-from pytorch_lightning import loggers
-from pytorch_lightning.callbacks import ModelCheckpoint,LearningRateMonitor
-from pytorch_lightning.callbacks.early_stopping import EarlyStopping
+import pandas as pd
 
-from rainforest.utils import utils
+class args:
+    train_df_path = "./data/raw/RCSAD/train_tp.csv"
+    test_df_path = "./data/raw/RCSAD/sample_submission.csv"
+    checkpoint_dir = "./outputs/checkpoints"
+    loss_fn = BCEWithLogitsLoss()
+    train_batch_size = 16
+    num_workers = 3
+    learning_rate=1e-5
+    model_parameters=None
 
-from rainforest.pl import LitDataset, LitModel
+train = pd.read_csv(args.train_df_path)
+test = pd.read_csv(args.test_df_path)
+train.groupby("recording_id").agg(lambda x: list(x)).reset_index()
 
-def train(config_path: str = "./config/experiments.yml", job: str = "main"):
-    # seed
-    pl.seed_everything(1)
-    np.random.seed(1)
-    torch.manual_seed(1)
-    torch.cuda.manual_seed(1)
-    # config
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    torch.cuda.empty_cache()
-    print(device)
-    # args
-    print(config_path)
-    config = yaml.load(open(config_path), Loader=yaml.FullLoader)
-    data_path = config["DATA_PATH"]
-    output_path = config["OUTPUT_PATH"]
-    project = config["PROJECT"]
-    hyperparameters = config[job]
+pl.seed_everything(42)
 
-    # hypterparamters
-    batch_size = int(hyperparameters["BATCH_SIZE"])
-    learning_rate = float(hyperparameters["LEARNING_RATE"])
-    max_epoch = int(hyperparameters["MAX_EPOCH"])
-    num_workers = int(hyperparameters["NUM_WORKERS"])
-    gpus = int(hyperparameters["GPUS"])
-    for key, value in hyperparameters.items():
-        print(f"{key}: {value}")
-    # https://github.com/tchaton/lightning-geometric/blob/master/examples/utils/loggers.py
-    # output directory
-    random_str = ''.join(random.choices(
-        string.ascii_uppercase + string.digits, k=5))
-    experiment = f"{random_str}_{job}_{batch_size}_{learning_rate}_{max_epoch}"
-    output_dir = f"{output_path}/checkpoints/{experiment}"
-    logger = f"{output_path}/logs/{experiment}"
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
+ds = AudioDataset(
+    train,
+    test,
+    train_batch_size=args.train_batch_size,
+    num_workers=args.num_workers
+)
 
-    # loggers
-    wandb.login()
-    tb_logger = loggers.TensorBoardLogger(save_dir=logger)
-    wandb_logger = loggers.WandbLogger(
-        project=project, log_model="all", name=experiment)
-    # data
-    dataset = LitDataset(data_path, batch_size, num_workers)
-    dataset.prepare_data()
-    dataset.setup()
-    val_samples = next(iter(dataset.val_dataloader()))
-    val_imgs, val_labels = val_samples[0], val_samples[1]
-    val_imgs.shape, val_labels.shape
-    # model
-    litmodel = LitModel(dataset.size(), dataset.num_classes, len(dataset.train_dataloader()), learning_rate)
-    wandb_logger.watch(litmodel)
-    _loggers = [tb_logger, wandb_logger]
-    _callbacks = [ModelCheckpoint(dirpath=output_dir), utils.ImagePredictionLogger(val_samples),LearningRateMonitor(logging_interval='step')]
-    # trainer
-    trainer = pl.Trainer(
-        logger=_loggers,
-        callbacks=_callbacks,
-        gpus=gpus,
-        max_epochs=max_epoch,
-        progress_bar_refresh_rate=20
-    )
-    trainer.fit(litmodel, dataset)
-    for key, value in hyperparameters.items():
-        print(f"{key}: {value}")
+log_dir = "./outputs/logs/tb_logs"
+tb_logger = TensorBoardLogger(save_dir=log_dir)
 
+mod = AudioClassifierModule(
+    loss_fn=args.loss_fn,
+    learning_rate=args.learning_rate,
+    model_parameters=args.model_parameters
+)
 
-if __name__ == '__main__':
-    fire.Fire(train)
+checkpoint_callback = ModelCheckpoint(
+    dirpath=args.checkpoint_dir,
+    monitor=None,
+    verbose=True
+)
+
+trainer = pl.Trainer(
+    logger=tb_logger,
+    accelerator="gpu",
+    devices=1,
+    callbacks=[checkpoint_callback],
+    max_epochs=150
+)
+
+trainer.fit(mod, ds.train_dataloader(), ds.val_dataloader())
