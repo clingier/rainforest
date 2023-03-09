@@ -2,7 +2,7 @@
 
 This work is a deep audio classifier built on the kaggle Rainforest Connectino Species Audio Detection competition dataset.
 
-This work is still in progress 👷‍♂️
+This work is still in progress 👷‍♂️ 
 
 ## Setup
 
@@ -17,7 +17,7 @@ source activate rainforest
 poetry install
 ```
 
-## Commands
+## Commands (Not yet)
 
 - Train model
 ```bash
