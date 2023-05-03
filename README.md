@@ -2,7 +2,8 @@
 
 This work is a deep audio classifier built on the kaggle Rainforest Connectino Species Audio Detection competition dataset.
 
-This work is still in progress 👷‍♂️ 
+[![RAINFOREST YOUTUBEVIDEO](http://img.youtube.com/vi/IM_dR1Bcn68/0.jpg)](https://www.youtube.com/watch?v=IM_dR1Bcn68 "Deep Audio Classification: Explore the rainforest soundscape")
+
 
 ## Setup
 
